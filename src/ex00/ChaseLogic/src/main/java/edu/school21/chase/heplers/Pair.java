@@ -1,4 +1,4 @@
-package edu.school21.game.heplers;
+package edu.school21.chase.heplers;
 
 public class Pair <F,S> {
     private F first;
@@ -23,6 +23,15 @@ public class Pair <F,S> {
 
     public void setSecond(S second) {
         this.second = second;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (obj instanceof Pair) {
+            return this.getFirst() == ((Pair<?, ?>)obj).getFirst() &&
+                    this.getSecond() == ((Pair<?, ?>)obj).getSecond();
+        }
+        return false;
     }
 
     @Override

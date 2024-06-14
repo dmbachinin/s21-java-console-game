@@ -14,10 +14,11 @@ public class GamePrinter {
     }
 
     public void printField(GameField gameField) {
-        int size = gameField.getSize();
+        int sizeX = gameField.getSizeX();
+        int sizeY = gameField.getSizeY();
         ColoredPrinter printer = new ColoredPrinter.Builder(1, false).build();;
-        for (int x = 0; x < size; x++){
-            for (int y = 0; y < size; y++){
+        for (int x = 0; x < sizeX; x++){
+            for (int y = 0; y < sizeY; y++){
                 Ansi.BColor bColor = Ansi.BColor.NONE;
                 String sellChar = "";
                 switch (gameField.getSellType(x, y)) {

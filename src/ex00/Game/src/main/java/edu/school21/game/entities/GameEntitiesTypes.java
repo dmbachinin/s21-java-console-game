@@ -11,4 +11,14 @@ public enum GameEntitiesTypes {
     public int getValue() {
         return val;
     }
+
+    public static GameEntitiesTypes getTypeForVal(int val) {
+        GameEntitiesTypes[] gets = GameEntitiesTypes.values();
+        for (GameEntitiesTypes get : gets) {
+            if (get.getValue() == val) {
+                return get;
+            }
+        }
+        return null;
+    }
 }

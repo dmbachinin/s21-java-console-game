@@ -1,31 +1,27 @@
 package edu.school21.game.entities;
 
 import edu.school21.chase.ChaseType;
-import edu.school21.chase.MovementDirection;
-import edu.school21.game.heplers.Pair;
+import edu.school21.chase.heplers.Pair;
 
 public class Enemy {
+    private Pair<Integer, Integer> position;
     private ChaseType type;
-    private int xPos;
-    private int yPos;
 
-    public Enemy(Pair<Integer, Integer> pos) {
+    public Enemy(Pair<Integer, Integer> startPos) {
         type = ChaseType.getRandom();
-        xPos = pos.getFirst();
-        yPos = pos.getSecond();
+        position = startPos;
     }
 
-    public Enemy(Pair<Integer, Integer> pos, ChaseType type) {
+    public Enemy(Pair<Integer, Integer> startPos, ChaseType type) {
         this.type = type;
-        xPos = pos.getFirst();
-        yPos = pos.getSecond();
+        position = startPos;
     }
 
-    public Pair<Integer, Integer> getPos() {
-        return new Pair<>(xPos, yPos);
+    public Pair<Integer, Integer> getPosition() {
+        return position;
     }
 
-    public ChaseType getType() {
+    public ChaseType getChaseType() {
         return type;
     }
 }

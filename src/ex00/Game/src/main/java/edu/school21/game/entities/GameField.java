@@ -1,67 +1,72 @@
 package edu.school21.game.entities;
 
-import edu.school21.game.heplers.Pair;
+import edu.school21.chase.ChaseType;
+import edu.school21.chase.MovementDirection;
+import edu.school21.chase.heplers.Pair;
+import edu.school21.game.exceptions.GameGenerateException;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
 public class GameField {
-    private final Random rnd;
-    private final Integer[][] field;
-    private final int size;
-    private final int enemiesCount;
-    private final int wallsCount;
-    private final int outputsCount;
-    private final int spaceAroundOutput;
-    private final int spaceAroundHero;
+    private Random rnd;
+    private Integer[][] field;
+    private int sizeX;
+    private int sizeY;
+    private int enemiesCount;
+    private int wallsCount;
+    private int spaceAroundOutput;
+    private int spaceAroundHero;
 
     private List<Enemy> enemies;
-    private List<Pair<Integer, Integer>> outputs;
-    private Hero hero;
+    private Pair<Integer, Integer> output;
+    private Pair<Integer, Integer> hero;
 
 
-    public GameField(int enemiesCount, int wallsCount, int size) {
+    public GameField(int enemiesCount, int wallsCount, int sizeX, int sizeY) throws GameGenerateException {
         rnd = new Random();
-        field = new Integer[size][size];
+        this.enemiesCount = enemiesCount;
+        this.wallsCount = wallsCount;
+        this.sizeX = sizeX;
+        this.sizeY = sizeY;
+
+        field = new Integer[sizeX][sizeY];
         for (int x = 0; x < field.length; x++){
             for (int y = 0; y < field[0].length; y++){
                 field[x][y] = GameEntitiesTypes.VOID.getValue();
             }
         }
-        this.enemiesCount = enemiesCount;
-        this.wallsCount = wallsCount;
-        this.size = size;
 
-        outputsCount = 1;
         spaceAroundOutput = 3;
         spaceAroundHero = 2;
 
         enemies = new ArrayList<>();
-        outputs = new ArrayList<>();
         boolean isGenerate = generate();
         if (!isGenerate) {
-            System.err.println("ОШИБКА ГЕНЕРАЦИИ!!");
+            throw new GameGenerateException("Не удалось сгененировать игровое поле по заданным параметрам");
         }
+    }
+
+    public GameField(Integer[][] gameField) {
+
     }
 
     private boolean generate() {
-        if (enemiesCount + wallsCount + outputsCount + 1 >= size * size) {
+        if (enemiesCount + wallsCount  + 2 >= sizeX * sizeY) {
             return false;
         }
 
-        return generateOutputs() && generateHero() && generateEnemies() && generateWalls();
+        return generateOutput() && generateHero() && generateEnemies() && generateWalls();
     }
 
-    private boolean generateOutputs() {
-        for (int i = 0; i < outputsCount; i++) {
-            Pair<Integer, Integer> outputPos = getRandomPos(GameEntitiesTypes.OUTPUT);
-            if (outputPos == null) {
-                return false;
-            }
-            setEntity(outputPos, GameEntitiesTypes.OUTPUT);
-            outputs.add(outputPos);
+    private boolean generateOutput() {
+        Pair<Integer, Integer> outputPos = getRandomPos(GameEntitiesTypes.OUTPUT);
+        if (outputPos == null) {
+            return false;
         }
+        setEntity(outputPos, GameEntitiesTypes.OUTPUT);
+        output = outputPos;
         return true;
     }
 
@@ -71,7 +76,7 @@ public class GameField {
             return false;
         }
         setEntity(heroPos, GameEntitiesTypes.HERO);
-        hero = new Hero(heroPos);
+        hero = heroPos;
         return true;
     }
 
@@ -82,7 +87,7 @@ public class GameField {
                 return false;
             }
             setEntity(enemyPos, GameEntitiesTypes.ENEMY);
-            Enemy enemy = new Enemy(enemyPos);
+            Enemy enemy= new Enemy(enemyPos, ChaseType.HUNTER);
             enemies.add(enemy);
         }
         return true;
@@ -109,8 +114,8 @@ public class GameField {
 
     private List<Pair<Integer, Integer>> getPossiblePos(GameEntitiesTypes entity) {
         List<Pair<Integer, Integer>> possiblePos = new ArrayList<>();
-        for (int x = 0; x < size; x++) {
-            for (int y = 0; y < size; y++) {
+        for (int x = 0; x < sizeX; x++) {
+            for (int y = 0; y < sizeY; y++) {
                 if (getSellType(x, y) == GameEntitiesTypes.VOID) {
                     if (entity == GameEntitiesTypes.WALL) {
                         possiblePos.add(new Pair<>(x, y));
@@ -132,7 +137,7 @@ public class GameField {
         external:
         for (int x = xPos - radius; x < xPos + radius; x++) {
             for (int y = yPos - radius; y < yPos + radius; y++) {
-                if (x < size && x >= 0 && y < size && y >= 0) {
+                if (x < sizeX && x >= 0 && y < sizeY && y >= 0) {
                     if (getSellType(x, y) == GameEntitiesTypes.HERO ||
                             getSellType(x, y) == GameEntitiesTypes.OUTPUT) {
                         result = false;
@@ -151,29 +156,57 @@ public class GameField {
     }
 
     public GameEntitiesTypes getSellType(int x, int y) {
-        if (x < 0 || x >= size && y < 0 || y >= size) {
-            return null;
-        }
-        return GameEntitiesTypes.values()[field[x][y]];
+        return isValidPosition(x, y) ? GameEntitiesTypes.getTypeForVal(field[x][y]) : null;
     }
 
     public Integer[][] getField() {
         return field;
     }
 
-    public Hero getHero() {
+    public Pair<Integer, Integer> getHeroPosition() {
         return hero;
+    }
+
+    public boolean heroMove(MovementDirection direction) {
+        return  move(hero, GameEntitiesTypes.HERO, direction);
+    }
+
+    public void enemyMove(Enemy enemy, MovementDirection direction) {
+        move(enemy.getPosition(), GameEntitiesTypes.ENEMY, direction);
+    }
+
+    private boolean move(Pair<Integer, Integer> position, GameEntitiesTypes type, MovementDirection direction) {
+        int nextX = position.getFirst() + direction.getChangeX();
+        int nextY = position.getSecond() + direction.getChangeY();
+        boolean isMove =  isValidPosition(nextX, nextY) && getSellType(nextX, nextY) != GameEntitiesTypes.WALL &&
+                getSellType(nextX, nextY) != GameEntitiesTypes.ENEMY;
+        if (isMove) {
+            setEntity(position, GameEntitiesTypes.VOID);
+            position.setFirst(nextX);
+            position.setSecond(nextY);
+            setEntity(position, type);
+
+        }
+        return isMove;
+    }
+
+    private boolean isValidPosition(int x, int y) {
+        return !(x < 0 || x >= sizeX || y < 0 || y >= sizeY);
     }
 
     public List<Enemy> getEnemies() {
         return enemies;
     }
 
-    public List<Pair<Integer, Integer>> getOutputs() {
-        return outputs;
+    public Pair<Integer, Integer> getOutputPosition() {
+        return output;
     }
 
-    public int getSize() {
-        return size;
+    public int getSizeX() {
+        return sizeX;
+    }
+
+    public int getSizeY() {
+        return sizeY;
     }
 }
