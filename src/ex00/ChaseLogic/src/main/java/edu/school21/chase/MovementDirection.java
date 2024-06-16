@@ -12,6 +12,25 @@ public enum MovementDirection {
         this.changeX = changeX;
         this.changeY = changeY;
     }
+    static MovementDirection getOpposite(MovementDirection move) {
+        MovementDirection result = STAND;
+        switch (move) {
+            case RIGHT:
+                result = LEFT;
+                break;
+            case LEFT:
+                result = RIGHT;
+                break;
+            case UP:
+                result = DOWN;
+                break;
+            case DOWN:
+                result = UP;
+                break;
+
+        }
+        return result;
+    }
 
     public int getChangeX() {
         return changeX;

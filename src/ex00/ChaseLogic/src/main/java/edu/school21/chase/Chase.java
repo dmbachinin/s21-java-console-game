@@ -16,9 +16,9 @@ public class Chase {
     public MovementDirection move(Integer[][] gameField,
                                   Pair<Integer, Integer> enemyPos,
                                   Pair<Integer, Integer> playerPos,
-                                  Pair<Integer, Integer> output,
+                                  Pair<Integer, Integer> outputPos,
                                   ChaseType type) {
-        if (!isValid(gameField, enemyPos) || !isValid(gameField, playerPos) || !isValid(gameField, output)) {
+        if (!isValid(gameField, enemyPos) || !isValid(gameField, playerPos) || !isValid(gameField, outputPos)) {
             return MovementDirection.STAND;
         }
 
@@ -28,13 +28,16 @@ public class Chase {
         MovementDirection moveDirection = MovementDirection.STAND;
         switch (type) {
             case HUNTER:
-                moveDirection = hunterChase(gameField, enemyPos, playerPos, output);
+                moveDirection = hunterChase(gameField, enemyPos, playerPos, outputPos);
                 break;
             case SCOUT:
+                moveDirection = scoutChase(gameField, enemyPos, playerPos, outputPos);
                 break;
             case SECURITY:
+                moveDirection = securityChase(gameField, enemyPos, playerPos, outputPos);
                 break;
             case STALKER:
+                moveDirection = stalkerChase(gameField, enemyPos, playerPos);
                 break;
         }
 
@@ -44,26 +47,83 @@ public class Chase {
     private MovementDirection hunterChase(Integer[][] gameField,
                                           Pair<Integer, Integer> enemyPos,
                                           Pair<Integer, Integer> playerPos,
-                                          Pair<Integer, Integer> output) {
+                                          Pair<Integer, Integer> outputPos) {
         MovementDirection result = tryMoveTo(enemyPos, playerPos);
         if (result == MovementDirection.STAND) {
-            List<Pair<Integer, Integer>> playerPath = buildPath(gameField, playerPos, output);
-            if (playerPath != null) {
+            List<Pair<Integer, Integer>> playerPath = buildPath(gameField, playerPos, outputPos);
+            if (playerPath != null && !playerPath.isEmpty()) {
                 for (int i = 0; i < playerPath.size(); i++) {
                     List<Pair<Integer, Integer>> routeToPlayerPath = buildPath(gameField, enemyPos, playerPath.get(i));
-                    if (routeToPlayerPath != null && routeToPlayerPath.size() <= i + 1){
+                    if (routeToPlayerPath != null && routeToPlayerPath.size() <= i + 1) {
                         result = tryMoveTo(enemyPos, routeToPlayerPath.getFirst());
                         break;
                     }
                 }
                 if (result == MovementDirection.STAND) {
+                    result = move(gameField, enemyPos, playerPos, outputPos, ChaseType.STALKER);
                 }
             }
         }
         return result;
     }
+
+    private MovementDirection securityChase(Integer[][] gameField,
+                                            Pair<Integer, Integer> enemyPos,
+                                            Pair<Integer, Integer> playerPos,
+                                            Pair<Integer, Integer> outputPos) {
+        MovementDirection result = tryMoveTo(enemyPos, playerPos);
+        if (result == MovementDirection.STAND) {
+            result = tryMoveTo(enemyPos, outputPos);
+            if (result == MovementDirection.STAND) {
+                List<Pair<Integer, Integer>> outputPath = buildPath(gameField, enemyPos, outputPos);
+                if (outputPath != null && !outputPath.isEmpty()) {
+                    result = tryMoveTo(enemyPos, outputPath.getFirst());
+                }
+            } else {
+                result = move(gameField, enemyPos, playerPos, outputPos, ChaseType.STALKER);
+            }
+        }
+        return result;
+    }
+
+    private MovementDirection stalkerChase(Integer[][] gameField,
+                                           Pair<Integer, Integer> enemyPos,
+                                           Pair<Integer, Integer> playerPos) {
+        MovementDirection result = tryMoveTo(enemyPos, playerPos);
+        if (result == MovementDirection.STAND) {
+            List<Pair<Integer, Integer>> pathToPlayer = buildPath(gameField, enemyPos, playerPos);
+            if (pathToPlayer != null  && !pathToPlayer.isEmpty()) {
+                result = tryMoveTo(enemyPos, pathToPlayer.getFirst());
+            }
+        }
+        return result;
+    }
+
+    private MovementDirection scoutChase(Integer[][] gameField,
+                                         Pair<Integer, Integer> enemyPos,
+                                         Pair<Integer, Integer> playerPos,
+                                         Pair<Integer, Integer> outputPos) {
+        MovementDirection result = tryMoveTo(enemyPos, playerPos);
+        if (result == MovementDirection.STAND) {
+            List<Pair<Integer, Integer>> playerPath = buildPath(gameField, playerPos, outputPos);
+            if (playerPath != null && !playerPath.isEmpty()) {
+                MovementDirection playerNextMove = tryMoveTo(playerPos, playerPath.getFirst());
+                Pair<Integer, Integer> targetPos = getNextPosition(playerPos, MovementDirection.getOpposite(playerNextMove));
+                List<Pair<Integer, Integer>> enemyPath = buildPath(gameField, enemyPos, targetPos);
+                if (enemyPath != null && !enemyPath.isEmpty()) {
+                    result = tryMoveTo(enemyPos, enemyPath.getFirst());
+                }
+            }
+        }
+        return result;
+    }
+
+    private Pair<Integer, Integer> getNextPosition(Pair<Integer, Integer> pos, MovementDirection movementDirection) {
+        return new Pair<>(pos.getFirst() + movementDirection.getChangeX(), pos.getSecond() + movementDirection.getChangeY());
+    }
+
     private MovementDirection tryMoveTo(Pair<Integer, Integer> start,
-                                       Pair<Integer, Integer> end) {
+                                        Pair<Integer, Integer> end) {
         MovementDirection[] mds = MovementDirection.values();
         MovementDirection result = MovementDirection.STAND;
         for (MovementDirection md : mds) {
@@ -79,11 +139,11 @@ public class Chase {
     }
 
     private List<Pair<Integer, Integer>> buildPath(Integer[][] gameField,
-                                                    Pair<Integer, Integer> start,
-                                                    Pair<Integer, Integer> end) {
+                                                   Pair<Integer, Integer> start,
+                                                   Pair<Integer, Integer> end) {
         Integer[][] gameFieldCopy = Arrays.stream(gameField).map(Integer[]::clone).toArray(Integer[][]::new);
         gameFieldCopy[start.getFirst()][start.getSecond()] = startSearchValue;
-        boolean isFound = searchInDepth(gameFieldCopy, start, end);
+        boolean isFound = BFS(gameFieldCopy, start, end, voidValue);
         if (!isFound) {
             return null;
         }
@@ -91,9 +151,9 @@ public class Chase {
     }
 
 
-    private boolean searchInDepth(Integer[][] gameFieldCopy,
+    public static boolean BFS(Integer[][] gameFieldCopy,
                                   Pair<Integer, Integer> start,
-                                  Pair<Integer, Integer> end) {
+                                  Pair<Integer, Integer> end, Integer voidValue) {
         MovementDirection[] mds = MovementDirection.values();
         Queue<Pair<Integer, Integer>> stack = new LinkedList<>();
         stack.add(start);
@@ -146,7 +206,7 @@ public class Chase {
         return result;
     }
 
-    private boolean isValid(Integer[][] gameField, Pair<Integer, Integer> pos) {
+    private static boolean isValid(Integer[][] gameField, Pair<Integer, Integer> pos) {
         return pos.getFirst() < gameField.length &&
                 pos.getFirst() >= 0 &&
                 pos.getSecond() < gameField[0].length &&

@@ -9,16 +9,43 @@ import java.io.IOException;
 
 public class GamePrinter {
     private Settings settings;
+
     public GamePrinter(String SettingsFilePath) throws IOException {
         settings = new Settings(SettingsFilePath);
+    }
+
+    public void printWin() {
+        System.out.println("Вы победили!");
+        printMainControl();
+    }
+
+    public void printLose() {
+        System.out.println("Вы проиграли :(");
+        printMainControl();
+    }
+
+    public void printControl() {
+        System.out.println("Управление:");
+        System.out.println(" w ");
+        System.out.println("asd - Перемещение");
+        System.out.println("f - Пропустить ход");
+        System.out.println("r - Перезапустить игру");
+        System.out.println("9 - Сдаться");
+
+    }
+
+    private void printMainControl() {
+        System.out.println("r - Перезапустить игру");
+        System.out.println("Any Key - Выйти");
     }
 
     public void printField(GameField gameField) {
         int sizeX = gameField.getSizeX();
         int sizeY = gameField.getSizeY();
-        ColoredPrinter printer = new ColoredPrinter.Builder(1, false).build();;
-        for (int x = 0; x < sizeX; x++){
-            for (int y = 0; y < sizeY; y++){
+        ColoredPrinter printer = new ColoredPrinter.Builder(1, false).build();
+        ;
+        for (int x = 0; x < sizeX; x++) {
+            for (int y = 0; y < sizeY; y++) {
                 Ansi.BColor bColor = Ansi.BColor.NONE;
                 String sellChar = "";
                 switch (gameField.getSellType(x, y)) {

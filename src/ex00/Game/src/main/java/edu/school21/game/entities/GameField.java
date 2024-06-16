@@ -1,63 +1,132 @@
 package edu.school21.game.entities;
 
-import edu.school21.chase.ChaseType;
+import edu.school21.chase.Chase;
 import edu.school21.chase.MovementDirection;
 import edu.school21.chase.heplers.Pair;
 import edu.school21.game.exceptions.GameGenerateException;
+import edu.school21.game.exceptions.IllegalParametersException;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
 
 public class GameField {
-    private Random rnd;
+    private Random rnd = new Random();
     private Integer[][] field;
     private int sizeX;
     private int sizeY;
     private int enemiesCount;
     private int wallsCount;
-    private int spaceAroundOutput;
-    private int spaceAroundHero;
+    private final int SPACE_AROUND_OUTPUT = 3;
+    private final int SPACE_AROUND_HERO = 2;
+    private final int GENERATION_ATTEMPTS_COUNT = 10000;
 
     private List<Enemy> enemies;
     private Pair<Integer, Integer> output;
     private Pair<Integer, Integer> hero;
 
 
-    public GameField(int enemiesCount, int wallsCount, int sizeX, int sizeY) throws GameGenerateException {
-        rnd = new Random();
+    public GameField(int enemiesCount, int wallsCount, int sizeX, int sizeY) throws IllegalParametersException {
         this.enemiesCount = enemiesCount;
         this.wallsCount = wallsCount;
         this.sizeX = sizeX;
         this.sizeY = sizeY;
-
-        field = new Integer[sizeX][sizeY];
-        for (int x = 0; x < field.length; x++){
-            for (int y = 0; y < field[0].length; y++){
+        this.field = new Integer[sizeX][sizeY];
+        for (int x = 0; x < field.length; x++) {
+            for (int y = 0; y < field[0].length; y++) {
                 field[x][y] = GameEntitiesTypes.VOID.getValue();
             }
         }
 
-        spaceAroundOutput = 3;
-        spaceAroundHero = 2;
-
-        enemies = new ArrayList<>();
+        this.enemies = new ArrayList<>();
         boolean isGenerate = generate();
+        int genCount = 1;
+        while (!isGenerate && genCount != GENERATION_ATTEMPTS_COUNT) {
+            isGenerate = generate();
+            genCount++;
+        }
+        if (!isGenerate) {
+            throw new IllegalParametersException("Не удалось сгененировать игровое поле по заданным параметрам");
+        }
+    }
+    public void regenerate() throws GameGenerateException {
+        this.field = new Integer[sizeX][sizeY];
+        for (int x = 0; x < field.length; x++) {
+            for (int y = 0; y < field[0].length; y++) {
+                field[x][y] = GameEntitiesTypes.VOID.getValue();
+            }
+        }
+        this.hero = null;
+        this.enemies = new ArrayList<>();
+        this.output = null;
+        boolean isGenerate = generate();
+        int genCount = 1;
+        while (!isGenerate && genCount != GENERATION_ATTEMPTS_COUNT) {
+            isGenerate = generate();
+            genCount++;
+        }
         if (!isGenerate) {
             throw new GameGenerateException("Не удалось сгененировать игровое поле по заданным параметрам");
         }
     }
+    public GameField(Integer[][] gameField) throws GameGenerateException {
+        enemies = new ArrayList<>();
+        boolean isParsed = parseGameField(gameField);
+        if (!isParsed) {
+            throw new GameGenerateException("Не удалось сгененировать игровое поле по начальной матрице");
+        }
+    }
 
-    public GameField(Integer[][] gameField) {
+    private boolean parseGameField(Integer[][] gameField) {
+        this.enemiesCount = 0;
+        this.wallsCount = 0;
+        this.sizeX = gameField.length;
+        this.sizeY = gameField[0].length;
+        this.field = new Integer[sizeX][sizeY];
+        this.hero = null;
+        this.enemies = new ArrayList<>();
+        this.output = null;
 
+        for (int x = 0; x < field.length; x++) {
+            for (int y = 0; y < field[0].length; y++) {
+                Integer cellValue = gameField[x][y];
+                GameEntitiesTypes type = GameEntitiesTypes.getTypeForVal(cellValue);
+                field[x][y] = type != null ? gameField[x][y] : GameEntitiesTypes.VOID.getValue();
+                if (type == GameEntitiesTypes.ENEMY) {
+                    enemiesCount++;
+                    enemies.add(new Enemy(new Pair<>(x, y)));
+                } else if (type == GameEntitiesTypes.HERO) {
+                    if (hero != null) {
+                        return false;
+                    }
+                    hero = new Pair<>(x, y);
+                } else if (type == GameEntitiesTypes.OUTPUT) {
+                    if (output != null) {
+                        return false;
+                    }
+                    output = new Pair<>(x, y);
+                } else if (type == GameEntitiesTypes.WALL) {
+                    wallsCount++;
+                }
+            }
+        }
+        return output != null && hero != null;
     }
 
     private boolean generate() {
-        if (enemiesCount + wallsCount  + 2 >= sizeX * sizeY) {
+        if (enemiesCount + wallsCount + 2 >= sizeX * sizeY) {
             return false;
         }
+        boolean isGenerate = generateOutput() && generateHero() && generateEnemies() && generateWalls();
+        boolean isPassable = false;
+        if (isGenerate) {
+            Integer[][] gameFieldCopy = Arrays.stream(field).map(Integer[]::clone).toArray(Integer[][]::new);
+            gameFieldCopy[hero.getFirst()][hero.getSecond()] = 100;
+            isPassable = Chase.BFS(gameFieldCopy, hero, output, GameEntitiesTypes.VOID.getValue());
+        }
 
-        return generateOutput() && generateHero() && generateEnemies() && generateWalls();
+        return isGenerate && isPassable;
     }
 
     private boolean generateOutput() {
@@ -87,7 +156,7 @@ public class GameField {
                 return false;
             }
             setEntity(enemyPos, GameEntitiesTypes.ENEMY);
-            Enemy enemy= new Enemy(enemyPos, ChaseType.HUNTER);
+            Enemy enemy = new Enemy(enemyPos);
             enemies.add(enemy);
         }
         return true;
@@ -121,9 +190,9 @@ public class GameField {
                         possiblePos.add(new Pair<>(x, y));
                     } else if (entity == GameEntitiesTypes.OUTPUT && getSellType(x, y) == GameEntitiesTypes.VOID) {
                         possiblePos.add(new Pair<>(x, y));
-                    } else if (entity == GameEntitiesTypes.HERO && checkNeighbors(x, y, spaceAroundOutput)) {
+                    } else if (entity == GameEntitiesTypes.HERO && checkNeighbors(x, y, SPACE_AROUND_OUTPUT)) {
                         possiblePos.add(new Pair<>(x, y));
-                    } else if (entity == GameEntitiesTypes.ENEMY && checkNeighbors(x, y, spaceAroundHero)) {
+                    } else if (entity == GameEntitiesTypes.ENEMY && checkNeighbors(x, y, SPACE_AROUND_HERO)) {
                         possiblePos.add(new Pair<>(x, y));
                     }
                 }
@@ -168,24 +237,24 @@ public class GameField {
     }
 
     public boolean heroMove(MovementDirection direction) {
-        return  move(hero, GameEntitiesTypes.HERO, direction);
+        return move(hero, GameEntitiesTypes.HERO, direction);
     }
 
-    public void enemyMove(Enemy enemy, MovementDirection direction) {
+    public boolean enemyMove(Enemy enemy, MovementDirection direction) {
         move(enemy.getPosition(), GameEntitiesTypes.ENEMY, direction);
+        return enemy.getPosition().equals(hero);
     }
 
     private boolean move(Pair<Integer, Integer> position, GameEntitiesTypes type, MovementDirection direction) {
         int nextX = position.getFirst() + direction.getChangeX();
         int nextY = position.getSecond() + direction.getChangeY();
-        boolean isMove =  isValidPosition(nextX, nextY) && getSellType(nextX, nextY) != GameEntitiesTypes.WALL &&
+        boolean isMove = isValidPosition(nextX, nextY) && getSellType(nextX, nextY) != GameEntitiesTypes.WALL &&
                 getSellType(nextX, nextY) != GameEntitiesTypes.ENEMY;
         if (isMove) {
             setEntity(position, GameEntitiesTypes.VOID);
             position.setFirst(nextX);
             position.setSecond(nextY);
             setEntity(position, type);
-
         }
         return isMove;
     }
