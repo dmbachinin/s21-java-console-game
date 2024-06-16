@@ -9,11 +9,8 @@ import java.io.IOException;
 
 public class Main {
     public static void main(String[] args) throws IOException, GameGenerateException, IllegalParametersException {
-        Integer[][] field = {
-                {0, 0, 3},
-                {1, 0, 0},
-                {0, 0, 2}};
         Game game = new Game(5, 20, 20, 20, "application-production.properties");
+//        game.devModeOn("application-dev.properties");
         game.start(System.in);
     }
 }

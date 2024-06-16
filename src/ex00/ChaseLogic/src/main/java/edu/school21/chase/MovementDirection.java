@@ -12,7 +12,7 @@ public enum MovementDirection {
         this.changeX = changeX;
         this.changeY = changeY;
     }
-    static MovementDirection getOpposite(MovementDirection move) {
+    public static MovementDirection getOpposite(MovementDirection move) {
         MovementDirection result = STAND;
         switch (move) {
             case RIGHT:

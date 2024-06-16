@@ -1,6 +1,7 @@
 package edu.school21.game.entities;
 
 import edu.school21.chase.ChaseType;
+import edu.school21.chase.MovementDirection;
 import edu.school21.chase.heplers.Pair;
 
 import java.util.Random;
@@ -8,6 +9,7 @@ import java.util.Random;
 public class Enemy {
     private Pair<Integer, Integer> position;
     private ChaseType type;
+    private MovementDirection lastMove;
 
     public Enemy(Pair<Integer, Integer> startPos) {
         Random rnd = new Random();
@@ -33,6 +35,14 @@ public class Enemy {
 
     public Pair<Integer, Integer> getPosition() {
         return position;
+    }
+
+    public MovementDirection getLastMove() {
+        return lastMove;
+    }
+
+    public void setLastMove(MovementDirection lastMove) {
+        this.lastMove = lastMove;
     }
 
     public ChaseType getChaseType() {
