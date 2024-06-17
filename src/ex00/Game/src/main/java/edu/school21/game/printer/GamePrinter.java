@@ -13,7 +13,7 @@ import java.util.List;
 public class GamePrinter {
     private Settings settings;
 
-    public GamePrinter(String SettingsFilePath) throws IOException {
+    public GamePrinter(String SettingsFilePath){
         settings = new Settings(SettingsFilePath);
     }
 

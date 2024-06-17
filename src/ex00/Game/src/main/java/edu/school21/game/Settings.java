@@ -3,6 +3,7 @@ package edu.school21.game;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.Properties;
 
 public class Settings {
@@ -18,10 +19,17 @@ public class Settings {
     private String goalColor = "BLUE";
     private String emptyColor = "YELLOW";
 
-    public Settings(String filePath) throws IOException {
+    public Settings(String filePath) {
         Properties properties = new Properties();
-        FileInputStream fis = new FileInputStream(filePath);
-        properties.load(fis);
+        try (InputStream input = Settings.class.getClassLoader().getResourceAsStream(filePath)) {
+            if (input == null) {
+                System.out.println("Sorry, unable to find " + filePath);
+                return;
+            }
+            properties.load(input);
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
 
         enemyChar = properties.getProperty("enemy.char", enemyChar);
         playerChar = properties.getProperty("player.char", playerChar);

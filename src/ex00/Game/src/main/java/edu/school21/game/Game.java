@@ -122,6 +122,9 @@ public class Game {
             }
             if (input.nextLine().equals("r")) {
                 gameField.regenerate();
+                if (!isDev) {
+                    ConsoleHelper.clear();
+                }
                 printerCurrent.printField(gameField);
                 printerCurrent.printControl();
             } else {
@@ -144,7 +147,7 @@ public class Game {
                 devPrinter.printDevField(gameField, highlightsPos);
                 devPrinter.printDevConfirmEnemyStep(enemy);
                 String line = input.nextLine();
-                if (line.equals("с")) {
+                if (line.equals("c")) {
                     gameField.enemyMove(enemy, MovementDirection.getOpposite(enemy.getLastMove()));
                     isCatch = false;
                 }

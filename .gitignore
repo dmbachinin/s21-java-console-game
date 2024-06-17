@@ -3,8 +3,10 @@
 .idea/
 out/
 target/
+test/
 .DS_Store
 *.iml
+dependency-reduced-pom.xml
 # Object files
 *.o
 *.ko
